@@ -1401,27 +1401,122 @@
            * @param {number} y
            */
           draw: function (x, y) {
-            var sourceX = x;
-            var sourceY = y;
-            var sourceWidth = this.config.WIDTH;
-            var sourceHeight = this.config.HEIGHT;
-            if (IS_HIDPI) {
-              sourceX *= 2;
-              sourceY *= 2;
-              sourceWidth *= 2;
-              sourceHeight *= 2;
+            var ctx = this.canvasCtx;
+            // 获取当前动画帧（兼容 init() 直接传入 0 的情况）
+            var frameX = this.currentAnimFrames[this.currentFrame] || x;
+
+            // 判断是否处于撞死状态（正常帧是220，或者状态为CRASHED）
+            var isCrashed =
+              this.status === Trex.status.CRASHED || frameX === 220;
+
+            // === 1. 核心模型重构：纯正像素风矩阵 (每行22列) ===
+            // 1: 绿色皮肤, 2: 眼睛, 3: 红色蝴蝶结/高跟鞋, 4: 粉色裙子, 5: 黄色蝴蝶结中心
+
+            // 小恐龙上半身和裙子 (静态部分)
+            var bodyMap = [
+              '          333       ', // 头顶红蝴蝶结
+              '         335331111  ', // 蝴蝶结中间 + 绿脑袋
+              '          333112111 ', // 蝴蝶结底部 + 眼睛(2)
+              '           111111111', // 鼻子/上颚
+              '          1111111111', // 鼻子/上颚
+              '          1111111   ', // 张开的嘴巴间隙
+              '          111111111 ', // 下颚
+              '          111111    ', // 脖子
+              '          111111    ', // 脖子
+              '         111111    ', // 尾巴尖端
+              '  1       1111111   ', // 尾巴 + 身体后部
+              '  11     111111111  ', // 身体 + 小短手
+              '  111  111111111    ', // 身体
+              '   1111111111111      ', // 身体底部
+              '    11111111111       ', // 身体底部
+              '     4444444444       ', // 裙子顶部
+              '    444444444444      ', // 裙摆展开
+              '   44444444444444     ', // 裙边最底层
+            ];
+
+            // 腿部动作1：站立 / 跳跃 (双腿并齐)
+            var legsStanding = [
+              '     11    11      ', // 大腿
+              '      11    11      ', // 小腿
+              '      11    11      ', // 脚腕
+              '      33    33      ', // 高跟鞋顶部
+              '      333   333     ', // 高跟鞋主体
+              '      3 3   3 3     ', // 高跟鞋的鞋头与鞋跟 (性感高跟)
+            ];
+
+            // 腿部动作2：跑步姿态A (左脚向后抬起)
+            var legsRun1 = [
+              '            11      ',
+              '       111  11      ',
+              '       333  11      ',
+              '       3 3  33      ',
+              '              333     ',
+              '              3 3     ',
+            ];
+
+            // 腿部动作3：跑步姿态B (右脚向后抬起)
+            var legsRun2 = [
+              '      11              ',
+              '      11     111    ',
+              '      11     333    ',
+              '      33     3 3    ',
+              '      333             ',
+              '      3 3             ',
+            ];
+
+            // 根据当前原版动画帧，匹配我们的像素高跟鞋腿部动作
+            var legs;
+            if (frameX === 88) {
+              legs = legsRun1;
+            } else if (frameX === 132) {
+              legs = legsRun2;
+            } else {
+              legs = legsStanding;
             }
-            this.canvasCtx.drawImage(
-              this.image,
-              sourceX,
-              sourceY,
-              sourceWidth,
-              sourceHeight,
-              this.xPos,
-              this.yPos,
-              this.config.WIDTH,
-              this.config.HEIGHT
-            );
+
+            // 将上半身和动态计算的腿部拼接在一起
+            var fullMap = bodyMap.concat(legs);
+
+            // === 2. 颜色映射与渲染 ===
+            var colors = {
+              '1': '#4CAF50', // 皮肤：可爱的亮绿色
+              '2': isCrashed ? '#FF0000' : '#000000', // 眼睛：正常是黑色，撞死变成红色
+              '3': '#F44336', // 蝴蝶结/高跟鞋：红色
+              '4': '#FF69B4', // 裙子：粉红色
+              '5': '#FFEB3B', // 蝴蝶结中心：黄色
+            };
+
+            var blockSize = 2; // 原版恐龙宽44，我们矩阵宽22，所以每个像素块放大为2x2
+
+            ctx.save();
+            // 将绘图原点移动到小恐龙的坐标 (Y轴微调-1完美对齐地面)
+            ctx.translate(this.xPos, this.yPos - 1);
+
+            // 遍历像素矩阵进行绘制
+            for (var row = 0; row < fullMap.length; row++) {
+              var line = fullMap[row];
+              for (var col = 0; col < line.length; col++) {
+                var char = line[col];
+                if (!colors[char]) continue;
+
+                var px = col * blockSize;
+                var py = row * blockSize;
+
+                // 完美还原原版的“眨眼”机制 (当 frameX === 44 时，小恐龙会闭眼)
+                if (char === '2' && frameX === 44) {
+                  ctx.fillStyle = colors['1']; // 涂上绿色眼皮
+                  ctx.fillRect(px, py, blockSize, blockSize);
+                  ctx.fillStyle = colors['2']; // 画一条黑线当作闭上的眼睛
+                  ctx.fillRect(px, py + blockSize / 2, blockSize, blockSize / 2);
+                } else {
+                  // 正常画像素块
+                  ctx.fillStyle = colors[char];
+                  ctx.fillRect(px, py, blockSize, blockSize);
+                }
+              }
+            }
+
+            ctx.restore();
           },
           /**
            * Sets a random time for the blink to happen.
