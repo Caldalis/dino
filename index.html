@@ -1,5 +1,13 @@
-<html>
+<!doctype html>
+<html lang="zh-CN">
   <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="theme-color" content="#f7f7f7" />
+
     <title>T-Rex Game</title>
 
     <script type="text/javascript">
@@ -12,9 +20,7 @@
           myClasses[i].style.display = 'none';
         }
       }
-      // Copyright (c) 2014 The Chromium Authors. All rights reserved.
-      // Use of this source code is governed by a BSD-style license that can be
-      // found in the LICENSE file.
+
       (function () {
         'use strict';
         /**
@@ -2731,6 +2737,84 @@
         }
       }
     </style>
+    <style>
+      /* Game container base styles (so it works without the `.offline` class). */
+      .runner-container {
+        height: 150px;
+        max-width: 600px;
+        overflow: hidden;
+        position: relative;
+        width: 100%;
+        margin: 0 auto;
+        z-index: 2;
+      }
+
+      .runner-canvas {
+        height: 150px;
+        max-width: 600px;
+        opacity: 1;
+        overflow: hidden;
+        position: relative;
+        top: 0;
+        display: block;
+        z-index: 2;
+      }
+
+      .controller {
+        background: rgba(247, 247, 247, 0.1);
+        height: 100vh;
+        left: 0;
+        position: fixed;
+        top: 0;
+        width: 100vw;
+        z-index: 1;
+      }
+
+      /* Mobile-friendly layout tweaks. */
+      @media (pointer: coarse), (max-width: 768px) {
+        html,
+        body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+          overscroll-behavior: none;
+          -webkit-tap-highlight-color: transparent;
+          touch-action: manipulation;
+          background: #f7f7f7;
+        }
+
+        body {
+          /* Override legacy mobile margin rules above. */
+          margin: 0 !important;
+        }
+
+        .interstitial-wrapper {
+          box-sizing: border-box;
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+          padding: max(16px, env(safe-area-inset-top))
+            max(16px, env(safe-area-inset-right))
+            max(16px, env(safe-area-inset-bottom))
+            max(16px, env(safe-area-inset-left));
+          min-height: 100dvh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+        }
+
+        .runner-container,
+        .runner-canvas {
+          max-width: 100% !important;
+        }
+
+        .controller {
+          height: 100dvh;
+        }
+      }
+    </style>
   </head>
   <body id="t">
     <script>
@@ -2848,17 +2932,7 @@
     </div>
 
     <script type="text/javascript">
-      if (navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
-        new Runner('.interstitial-wrapper');
-      } else {
-        document.getElementById('main-frame-notchrome').style.display = '';
-      }
-    </script>
-
-    <script type="text/javascript">
-      if (navigator.userAgent.toLowerCase().indexOf('chrome') <= -1) {
-        hideClass('.onlyforchrome');
-      }
+      new Runner('.interstitial-wrapper');
     </script>
   </body>
 </html>
